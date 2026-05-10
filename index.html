@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Inventory Maintenance</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="InvKalung">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
+
+    <!-- Manifest for Installation -->
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Sistem%20Inventory%20Maintenance%22,%22short_name%22:%22InvKalung%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23f8fafc%22,%22theme_color%22:%22%230f172a%22,%22icons%22:[{%22src%22:%22https://cdn-icons-png.flaticon.com/512/2163/2163459.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
+
+    <!-- App Icon for iOS -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2163/2163459.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+        :root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .tab-active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .pulse-warning { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.01); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-overlay {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        @media (max-width: 640px) {
+            .btn-touch { min-height: 54px; }
+            .card-mobile { border-radius: 24px; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-900 overflow-x-hidden">
+
+    <!-- Screen: Login -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[200]">
+        <div class="bg-white p-8 rounded-[32px] shadow-2xl w-full max-w-sm text-center mx-4">
+            <div class="mb-8">
+                <div class="bg-blue-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                    <span class="text-4xl">🔐</span>
+                </div>
+                <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Login Maintenance</h2>
+                <p class="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-[0.2em]">Departemen Kalung</p>
+            </div>
+            <div class="relative mb-6">
+                <input type="password" id="login-pin" maxlength="4" inputmode="numeric" placeholder="PIN: 1234"
+                    class="w-full px-6 py-5 border-2 border-slate-100 rounded-2xl text-center text-xl placeholder:text-[10px] font-black outline-none focus:border-blue-500 transition-all bg-slate-50 focus:bg-white">
+            </div>
+            <button onclick="handleLogin()" class="w-full bg-slate-900 hover:bg-black text-white font-black py-5 rounded-2xl transition shadow-xl active:scale-95 uppercase text-xs tracking-widest btn-touch">Masuk ke Sistem</button>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-content" class="hidden opacity-0 transition-opacity duration-700">
+        <!-- Top Nav Mobile -->
+        <div class="lg:hidden sticky top-0 z-50 bg-slate-900 text-white p-4 pt-[var(--safe-top)] flex justify-between items-center">
+            <h1 class="text-sm font-black uppercase tracking-tighter">Inventory Kalung</h1>
+            <button onclick="handleLogout()" class="text-rose-400 text-[10px] font-black uppercase">Logout</button>
+        </div>
+
+        <div class="max-w-7xl mx-auto p-4 md:p-8 lg:p-12 pb-24 lg:pb-8">
+            <!-- Header Desktop -->
+            <header class="hidden lg:flex items-center justify-between mb-12 border-b pb-10">
+                <div>
+                    <h1 class="text-4xl font-extrabold tracking-tighter uppercase">Inventory Maintenance</h1>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Moch Miftahus Sholihin - Admin Panel</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="exportToPDF('IN')" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase">📥 Log Masuk</button>
+                    <button onclick="exportToPDF('OUT')" class="bg-rose-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase">📤 Log Keluar</button>
+                </div>
+            </header>
+
+            <!-- Global Search -->
+            <div class="mb-8 bg-white p-2 rounded-3xl shadow-xl border flex items-center gap-3">
+                <div class="bg-blue-500 p-4 rounded-2xl text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
+                </div>
+                <input type="text" id="global-search" placeholder="Cari ID Barang (SKU)..." class="flex-1 bg-transparent outline-none font-bold text-slate-700">
+                <button onclick="quickSearch()" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase">Cek</button>
+            </div>
+
+            <!-- Tab Dashboard -->
+            <div id="section-dashboard" class="space-y-8">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-6 rounded-[28px] border shadow-sm text-center">
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Total Item</p>
+                        <h3 id="stat-variants" class="text-3xl font-black">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-[28px] border shadow-sm text-center">
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Total Stok</p>
+                        <h3 id="stat-stock" class="text-3xl font-black text-blue-600">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-[28px] border shadow-sm text-center">
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Masuk Hari Ini</p>
+                        <h3 id="stat-today-in" class="text-3xl font-black text-emerald-500">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-[28px] border shadow-sm text-center">
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Keluar Hari Ini</p>
+                        <h3 id="stat-today-out" class="text-3xl font-black text-rose-500">0</h3>
+                    </div>
+                </div>
+
+                <!-- Log Table -->
+                <div class="bg-white rounded-[32px] shadow-sm border overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b">
+                        <h4 class="font-black text-xs uppercase">Aktivitas Terkini</h4>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-[9px] uppercase font-black text-slate-400">
+                                <tr>
+                                    <th class="px-6 py-4">Waktu</th>
+                                    <th class="px-6 py-4">Barang</th>
+                                    <th class="px-6 py-4">Tipe</th>
+                                    <th class="px-6 py-4 text-right">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="main-log-body" class="text-xs divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Transaction -->
+            <div id="section-transaction" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-[32px] border shadow-sm">
+                    <h3 class="font-black mb-6 uppercase">Terima Barang (IN)</h3>
+                    <form id="form-in" class="space-y-4">
+                        <select id="in-bolt-id" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold" required></select>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="in-qty" placeholder="Jumlah" class="p-4 bg-slate-50 border rounded-2xl font-bold" required>
+                            <input type="text" id="in-pic" placeholder="Nama Petugas" class="p-4 bg-slate-50 border rounded-2xl font-bold" required>
+                        </div>
+                        <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-2xl font-black uppercase">Simpan Masuk</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-8 rounded-[32px] border shadow-sm">
+                    <h3 class="font-black mb-6 uppercase">Ambil Barang (OUT)</h3>
+                    <form id="form-out" class="space-y-4">
+                        <select id="out-bolt-id" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold" required></select>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="out-qty" placeholder="Jumlah" class="p-4 bg-slate-50 border rounded-2xl font-bold" required>
+                            <input type="text" id="out-taker-name" placeholder="Nama Pengambil" class="p-4 bg-slate-50 border rounded-2xl font-bold" required>
+                        </div>
+                        <button type="submit" class="w-full bg-rose-600 text-white p-4 rounded-2xl font-black uppercase">Simpan Keluar</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab Master -->
+            <div id="section-master" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-[32px] border shadow-sm">
+                    <h3 class="font-black mb-6 uppercase">Tambah Item Baru</h3>
+                    <div class="space-y-4">
+                        <input type="text" id="master-bolt-sku" placeholder="SKU / ID Barang" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold uppercase">
+                        <input type="text" id="master-bolt-name" placeholder="Nama Barang" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold uppercase">
+                        <button onclick="addMasterBolt()" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-black uppercase">Daftarkan Barang</button>
+                    </div>
+                </div>
+                <div id="master-bolt-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- Tab Bar Mobile -->
+        <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 pb-[calc(1rem+var(--safe-bottom))] z-50">
+            <button onclick="switchTab('dashboard')" class="text-center flex-1">
+                <span class="block">📊</span>
+                <span class="text-[8px] font-black uppercase">Dashboard</span>
+            </button>
+            <button onclick="switchTab('transaction')" class="text-center flex-1">
+                <span class="block">🔄</span>
+                <span class="text-[8px] font-black uppercase">Transaksi</span>
+            </button>
+            <button onclick="switchTab('master')" class="text-center flex-1">
+                <span class="block">📦</span>
+                <span class="text-[8px] font-black uppercase">Database</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-full opacity-0 transition-all pointer-events-none z-[200] text-xs font-black uppercase tracking-widest">
+        Pesan Berhasil
+    </div>
+
+    <script>
+        let bolts = JSON.parse(localStorage.getItem('bolts_db')) || [];
+        let logs = JSON.parse(localStorage.getItem('logs_db')) || [];
+
+        function handleLogin() {
+            const pin = document.getElementById('login-pin').value;
+            if (pin === "1234") {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                document.getElementById('app-content').classList.add('opacity-100');
+                showToast("Selamat Datang!");
+            } else {
+                showToast("PIN Salah!");
+            }
+        }
+
+        function handleLogout() { location.reload(); }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('opacity-0');
+            t.classList.add('opacity-100');
+            setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 2000);
+        }
+
+        function save() {
+            localStorage.setItem('bolts_db', JSON.stringify(bolts));
+            localStorage.setItem('logs_db', JSON.stringify(logs));
+            updateUI();
+        }
+
+        function switchTab(tab) {
+            ['dashboard', 'transaction', 'master'].forEach(t => document.getElementById(`section-${t}`).classList.add('hidden'));
+            document.getElementById(`section-${tab}`).classList.remove('hidden');
+        }
+
+        function addMasterBolt() {
+            const sku = document.getElementById('master-bolt-sku').value.trim().toUpperCase();
+            const name = document.getElementById('master-bolt-name').value.trim().toUpperCase();
+            if(!sku || !name) return showToast("Isi Semua Data!");
+            bolts.push({ id: Date.now(), sku, name });
+            save();
+            document.getElementById('master-bolt-sku').value = '';
+            document.getElementById('master-bolt-name').value = '';
+        }
+
+        function getStock(name) {
+            return logs.reduce((acc, l) => {
+                if(l.name === name) return acc + (l.type === 'IN' ? l.qty : -l.qty);
+                return acc;
+            }, 0);
+        }
+
+        function updateUI() {
+            document.getElementById('stat-variants').textContent = bolts.length;
+            document.getElementById('stat-stock').textContent = logs.reduce((a, b) => a + (b.type === 'IN' ? b.qty : -b.qty), 0);
+
+            const options = bolts.map(b => `<option value="${b.id}">${b.sku} - ${b.name}</option>`).join('');
+            document.getElementById('in-bolt-id').innerHTML = options;
+            document.getElementById('out-bolt-id').innerHTML = options;
+
+            document.getElementById('main-log-body').innerHTML = logs.slice().reverse().slice(0, 10).map(l => `
+                <tr>
+                    <td class="px-6 py-4 font-bold text-slate-400">${new Date(l.time).toLocaleTimeString()}</td>
+                    <td class="px-6 py-4 font-black">${l.name}</td>
+                    <td class="px-6 py-4 font-black ${l.type==='IN'?'text-emerald-500':'text-rose-500'}">${l.type}</td>
+                    <td class="px-6 py-4 text-right font-black">${l.qty}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('master-bolt-list').innerHTML = bolts.map(b => `
+                <div class="bg-white p-4 rounded-2xl border flex justify-between items-center">
+                    <div>
+                        <p class="text-[8px] font-black text-blue-500">${b.sku}</p>
+                        <p class="font-black text-xs">${b.name}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[8px] font-black text-slate-400">STOK</p>
+                        <p class="text-xl font-black">${getStock(b.name)}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('form-in').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('in-bolt-id').value;
+            const bolt = bolts.find(b => b.id == id);
+            logs.push({ time: Date.now(), type: 'IN', name: bolt.name, qty: parseInt(document.getElementById('in-qty').value), pic: document.getElementById('in-pic').value });
+            save(); e.target.reset(); showToast("Tersimpan!");
+        };
+
+        document.getElementById('form-out').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('out-bolt-id').value;
+            const bolt = bolts.find(b => b.id == id);
+            const qty = parseInt(document.getElementById('out-qty').value);
+            if(qty > getStock(bolt.name)) return showToast("Stok Kurang!");
+            logs.push({ time: Date.now(), type: 'OUT', name: bolt.name, qty, pic: document.getElementById('out-taker-name').value });
+            save(); e.target.reset(); showToast("Berhasil Keluar!");
+        };
+
+        function quickSearch() {
+            const sku = document.getElementById('global-search').value.toUpperCase();
+            const b = bolts.find(x => x.sku === sku);
+            if(b) showToast(`${b.name}: STOK ${getStock(b.name)}`);
+            else showToast("Item Tidak Ditemukan");
+        }
+
+        window.onload = updateUI;
+    </script>
+</body>
+</html>
