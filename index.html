@@ -3,230 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BoltCore Pro - Sistem Inventaris Baut</title>
+    <title>Inventory Maintenance</title>
     
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="BoltCore">
+    <meta name="apple-mobile-web-app-title" content="InvKalung">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
     
-    <!-- Tailwind & Libraries -->
+    <!-- Manifest for Installation -->
+    <link rel="manifest" href='data:application/json,{"name":"Sistem Inventory Maintenance","short_name":"InvKalung","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2163/2163459.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
+    
+    <!-- App Icon for iOS -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2163/2163459.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        
+        :root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        :root { 
-            --safe-top: env(safe-area-inset-top); 
-            --safe-bottom: env(safe-area-inset-bottom); 
-        }
+
         .tab-active { 
-            background-color: #2563eb; 
-            color: white; 
-            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+            background-color: #0f172a; 
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2);
         }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-900 pb-24 overflow-x-hidden">
+<body class="bg-slate-50 min-h-screen text-slate-900 overflow-x-hidden">
 
-    <!-- Login Screen -->
+    <!-- Screen: Login -->
     <div id="login-screen" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[200]">
         <div class="bg-white p-8 rounded-[32px] shadow-2xl w-full max-w-sm text-center mx-4">
-            <div class="mb-6">
-                <span class="text-5xl">🔐</span>
+            <div class="mb-8">
+                <div class="bg-blue-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 rotate-3">
+                    <span class="text-4xl">🔐</span>
+                </div>
+                <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Login Maintenance</h2>
+                <p class="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-[0.2em]">Departemen Kalung</p>
             </div>
-            <h2 class="text-xl font-extrabold mb-2 text-slate-800 leading-tight">Inventory Maintenance Departemen Kalung</h2>
-            <p class="text-slate-400 text-sm mb-6 font-medium">Masukkan PIN Maintenance</p>
-            <input type="password" id="login-pin" maxlength="4" inputmode="numeric" placeholder="••••" class="w-full px-6 py-5 border-2 rounded-2xl text-center mb-4 bg-slate-50 outline-none focus:border-blue-500 text-2xl tracking-[1em] font-bold">
-            <button onclick="handleLogin()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase active:scale-95 transition-transform shadow-lg">
-                Buka Sistem
-            </button>
+            <div class="relative mb-6">
+                <input type="password" id="login-pin" maxlength="4" inputmode="numeric" placeholder="PIN: 1234" 
+                    class="w-full px-6 py-5 border-2 border-slate-100 rounded-2xl text-center text-xl font-black outline-none focus:border-blue-500 transition-all bg-slate-50 focus:bg-white">
+            </div>
+            <button onclick="handleLogin()" class="w-full bg-slate-900 hover:bg-black text-white font-black py-5 rounded-2xl transition shadow-xl active:scale-95 uppercase text-xs tracking-widest">Masuk ke Sistem</button>
+            <p class="mt-6 text-[9px] text-slate-300 font-bold uppercase tracking-widest">Created By Moch Miftahus Sholihin</p>
         </div>
     </div>
 
-    <!-- Offline Banner -->
-    <div id="offline-indicator" class="hidden bg-rose-600 text-white text-[10px] font-bold text-center py-1 sticky top-0 z-[100] uppercase tracking-widest">
-        Mode Offline: Data disimpan di memori perangkat
-    </div>
-
-    <!-- App Content -->
-    <div id="app-content" class="hidden opacity-0 transition-all duration-500 max-w-4xl mx-auto p-4 md:p-8">
-        
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded">V3.0 PRO</span>
-                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">BoltCore Pro</h1>
+    <!-- Main Content -->
+    <div id="app-content" class="hidden opacity-0 transition-opacity duration-700">
+        <div class="max-w-7xl mx-auto p-4 md:p-8 lg:p-12 pb-32">
+            <header class="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6 border-b pb-10 border-slate-200">
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tighter text-slate-900 uppercase">Inventory Kalung</h1>
+                    <p class="text-xs text-slate-400 font-bold uppercase mt-1">Sistem Manajemen Maintenance</p>
                 </div>
-                <p class="text-slate-500 text-xs">Manajemen Stok Baut Mandiri</p>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="exportToPDF('IN')" class="flex-1 md:flex-none bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl flex items-center justify-center text-xs font-bold hover:bg-slate-50 active:scale-95 transition">
-                    📥 PDF Masuk
-                </button>
-                <button onclick="exportToPDF('OUT')" class="flex-1 md:flex-none bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl flex items-center justify-center text-xs font-bold hover:bg-slate-50 active:scale-95 transition">
-                    📤 PDF Keluar
-                </button>
-            </div>
-        </header>
-
-        <!-- Dashboard -->
-        <div id="section-dashboard" class="space-y-6">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Sisa Stok</p>
-                    <h3 id="stat-stock" class="text-2xl font-black text-blue-600">0</h3>
-                </div>
-                <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Varian</p>
-                    <h3 id="stat-variants" class="text-2xl font-black text-slate-800">0</h3>
-                </div>
-                <div class="bg-emerald-50 p-5 rounded-3xl border border-emerald-100">
-                    <p class="text-[10px] font-bold text-emerald-500 uppercase">Masuk Hari Ini</p>
-                    <h3 id="stat-today-in" class="text-2xl font-black text-emerald-700">0</h3>
-                </div>
-                <div class="bg-rose-50 p-5 rounded-3xl border border-rose-100">
-                    <p class="text-[10px] font-bold text-rose-500 uppercase">Keluar Hari Ini</p>
-                    <h3 id="stat-today-out" class="text-2xl font-black text-rose-700">0</h3>
-                </div>
-            </div>
-
-            <!-- Transaction Table -->
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-6 border-b border-slate-50 flex justify-between items-center">
-                    <h4 class="font-bold text-sm">Aktivitas Terakhir</h4>
-                    <button onclick="clearHistory()" class="text-[10px] font-bold text-rose-500 uppercase hover:underline">Reset Riwayat</button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-black">
-                            <tr>
-                                <th class="px-6 py-4">Jam</th>
-                                <th class="px-6 py-4">Item</th>
-                                <th class="px-6 py-4">Status</th>
-                                <th class="px-6 py-4 text-right">Qty</th>
-                            </tr>
-                        </thead>
-                        <tbody id="log-body" class="text-xs divide-y divide-slate-50">
-                            <!-- Injected by JS -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="empty-state" class="p-12 text-center text-slate-400 hidden">
-                    <p class="text-xs italic">Belum ada aktivitas hari ini.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Transaction Form -->
-        <div id="section-transaction" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <h3 class="text-sm font-bold mb-4 flex items-center text-emerald-600">📥 Penerimaan Barang</h3>
-                <form id="form-in" class="space-y-4">
-                    <select id="in-bolt-id" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none focus:ring-2 focus:ring-emerald-500" required></select>
-                    <div class="grid grid-cols-3 gap-2">
-                        <select id="in-loc-rak" class="p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none" required>
-                            <option value="A">Rak A</option><option value="B">Rak B</option><option value="C">Rak C</option>
-                        </select>
-                        <select id="in-loc-kolom" class="p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none" required></select>
-                        <select id="in-loc-baris" class="p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none" required></select>
-                    </div>
-                    <input type="number" id="in-qty" placeholder="Jumlah Unit" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none" required>
-                    <input type="text" id="in-pic" placeholder="Nama Petugas" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none" required>
-                    <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-100 active:scale-95 transition">Simpan Masuk</button>
-                </form>
-            </div>
-
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <h3 class="text-sm font-bold mb-4 flex items-center text-rose-600">📤 Pengambilan Barang</h3>
-                <form id="form-out" class="space-y-4">
-                    <select id="out-bolt-id" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none focus:ring-2 focus:ring-rose-500" required></select>
-                    <input type="text" id="out-taker" placeholder="Nama Pengambil" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none" required>
-                    <input type="number" id="out-qty" placeholder="Jumlah Diambil" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none" required>
-                    <input type="text" id="out-ref" placeholder="No. WO / Referensi" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none">
-                    <button type="submit" class="w-full bg-rose-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-rose-100 active:scale-95 transition">Simpan Keluar</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Master Data -->
-        <div id="section-master" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <h4 class="text-sm font-bold mb-4">Tambah Varian Baru</h4>
                 <div class="flex gap-2">
-                    <input type="text" id="master-name" placeholder="Nama Baut (Contoh: M8 x 20mm)" class="flex-1 p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none">
-                    <button onclick="addMasterBolt()" class="bg-slate-900 text-white px-8 rounded-2xl font-bold active:scale-95 transition">Tambah</button>
+                    <button onclick="exportPDF()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-slate-50 transition">Export PDF</button>
+                    <button onclick="handleLogout()" class="text-rose-500 text-[10px] font-black uppercase tracking-widest px-4">Logout</button>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <div id="section-dashboard" class="space-y-8">
+                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Varian</p>
+                        <h3 id="stat-variants" class="text-3xl font-black text-slate-900">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Stok</p>
+                        <h3 id="stat-stock" class="text-3xl font-black text-blue-600">0</h3>
+                    </div>
+                    <div class="bg-emerald-50 p-6 rounded-[28px] border border-emerald-100 shadow-sm">
+                        <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Masuk Hari Ini</p>
+                        <h3 id="stat-today-in" class="text-3xl font-black text-emerald-700">0</h3>
+                    </div>
+                    <div class="bg-rose-50 p-6 rounded-[28px] border border-rose-100 shadow-sm">
+                        <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest">Keluar Hari Ini</p>
+                        <h3 id="stat-today-out" class="text-3xl font-black text-rose-700">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-50 flex justify-between items-center">
+                        <h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400">Aktivitas Terakhir</h4>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-slate-400 text-[9px] uppercase font-black">
+                                <tr>
+                                    <th class="px-6 py-4">Waktu</th>
+                                    <th class="px-6 py-4">Barang</th>
+                                    <th class="px-6 py-4">Tipe</th>
+                                    <th class="px-6 py-4 text-right">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="main-log-body" class="text-xs divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <div id="master-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            
-            <button onclick="handleLogout()" class="w-full py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-2 border-dashed border-slate-200 rounded-2xl mt-8">Logout Sesi</button>
+
+            <!-- Transaction Section -->
+            <div id="section-transaction" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Form Masuk -->
+                    <div class="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
+                        <h3 class="font-black text-emerald-600 uppercase text-xs tracking-widest mb-6">📥 Stok Masuk</h3>
+                        <form id="form-in" class="space-y-4">
+                            <select id="in-item-id" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-emerald-500 transition-all" required></select>
+                            <input type="number" id="in-qty" placeholder="Jumlah" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold outline-none" required>
+                            <input type="text" id="in-pic" placeholder="Nama Petugas" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold outline-none" required>
+                            <button type="submit" class="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-emerald-100 active:scale-95 transition uppercase text-[10px] tracking-widest">Simpan Masuk</button>
+                        </form>
+                    </div>
+                    <!-- Form Keluar -->
+                    <div class="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
+                        <h3 class="font-black text-rose-600 uppercase text-xs tracking-widest mb-6">📤 Stok Keluar</h3>
+                        <form id="form-out" class="space-y-4">
+                            <select id="out-item-id" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-rose-500 transition-all" required></select>
+                            <input type="number" id="out-qty" placeholder="Jumlah" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold outline-none" required>
+                            <input type="text" id="out-pic" placeholder="Nama Pengambil" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold outline-none" required>
+                            <button type="submit" class="w-full bg-rose-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-rose-100 active:scale-95 transition uppercase text-[10px] tracking-widest">Simpan Keluar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master Section -->
+            <div id="section-master" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm max-w-2xl mx-auto">
+                    <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest mb-6 text-center">Tambah Varian Barang</h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="new-item-name" placeholder="Nama Barang (contoh: Baut M8)" class="flex-1 p-4 bg-slate-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all">
+                        <button onclick="addItem()" class="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition">Tambah</button>
+                    </div>
+                </div>
+                <div id="master-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Bottom Nav -->
+            <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-xl border border-slate-100 p-2 rounded-[28px] shadow-2xl flex gap-2 z-50">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all tab-active">Dashboard</button>
+                <button onclick="switchTab('transaction')" id="nav-transaction" class="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all">Transaksi</button>
+                <button onclick="switchTab('master')" id="nav-master" class="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all">Master</button>
+            </nav>
         </div>
-
     </div>
-
-    <!-- Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 flex justify-around p-3 pb-[calc(0.75rem+var(--safe-bottom))] z-50">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center p-3 rounded-2xl transition-all tab-active w-20">
-            <span class="text-xl">📊</span>
-            <span class="text-[9px] font-black uppercase mt-1">Beranda</span>
-        </button>
-        <button onclick="switchTab('transaction')" id="nav-transaction" class="flex flex-col items-center p-3 rounded-2xl transition-all text-slate-400 w-20">
-            <span class="text-xl">🔄</span>
-            <span class="text-[9px] font-black uppercase mt-1">Transaksi</span>
-        </button>
-        <button onclick="switchTab('master')" id="nav-master" class="flex flex-col items-center p-3 rounded-2xl transition-all text-slate-400 w-20">
-            <span class="text-xl">⚙️</span>
-            <span class="text-[9px] font-black uppercase mt-1">Master</span>
-        </button>
-    </nav>
 
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-8 py-4 rounded-3xl shadow-2xl opacity-0 transition-all translate-y-4 pointer-events-none text-xs font-bold z-[300]"></div>
+    <div id="toast" class="fixed top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-full opacity-0 transition-all pointer-events-none z-[300] text-[10px] font-black uppercase tracking-widest"></div>
 
     <script>
-        // --- DATA LAYER ---
-        let bolts = JSON.parse(localStorage.getItem('bc_bolts')) || [{id: 1, name: 'Baut Stainless M8'}];
-        let logs = JSON.parse(localStorage.getItem('bc_logs')) || [];
+        let bolts = JSON.parse(localStorage.getItem('dep_kalung_items')) || [{id: 1, name: 'Baut M8'}];
+        let transactions = JSON.parse(localStorage.getItem('dep_kalung_logs')) || [];
 
         function save() {
-            localStorage.setItem('bc_bolts', JSON.stringify(bolts));
-            localStorage.setItem('bc_logs', JSON.stringify(logs));
+            localStorage.setItem('dep_kalung_items', JSON.stringify(bolts));
+            localStorage.setItem('dep_kalung_logs', JSON.stringify(transactions));
             updateUI();
         }
 
-        // --- AUTH ---
         function handleLogin() {
             if (document.getElementById('login-pin').value === "1234") {
-                localStorage.setItem('bc_auth', 'true');
-                showApp();
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                setTimeout(() => document.getElementById('app-content').classList.add('opacity-100'), 50);
+                sessionStorage.setItem('isLoggedIn_Kalung', 'true');
+                updateUI();
             } else {
-                showToast("PIN Salah!");
-                document.getElementById('login-pin').value = "";
+                showToast("PIN SALAH!");
             }
         }
 
         function handleLogout() {
-            localStorage.removeItem('bc_auth');
+            sessionStorage.removeItem('isLoggedIn_Kalung');
             location.reload();
         }
 
-        function showApp() {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-content').classList.remove('hidden');
-            setTimeout(() => document.getElementById('app-content').classList.add('opacity-100'), 50);
-            updateUI();
-        }
-
-        // --- NAVIGATION ---
         function switchTab(tab) {
             ['dashboard', 'transaction', 'master'].forEach(t => {
                 document.getElementById(`section-${t}`).classList.add('hidden');
@@ -238,18 +210,17 @@
             document.getElementById(`nav-${tab}`).classList.remove('text-slate-400');
         }
 
-        // --- CORE LOGIC ---
-        function addMasterBolt() {
-            const name = document.getElementById('master-name').value.trim();
+        function addItem() {
+            const name = document.getElementById('new-item-name').value.trim();
             if(!name) return;
             bolts.push({ id: Date.now(), name });
-            document.getElementById('master-name').value = "";
+            document.getElementById('new-item-name').value = '';
             save();
-            showToast("Varian Baru Tersimpan");
+            showToast("Barang ditambahkan");
         }
 
-        function deleteBolt(id) {
-            if(confirm('Hapus varian ini?')) {
+        function deleteItem(id) {
+            if(confirm("Hapus varian ini?")) {
                 bolts = bolts.filter(b => b.id !== id);
                 save();
             }
@@ -257,156 +228,125 @@
 
         document.getElementById('form-in').onsubmit = (e) => {
             e.preventDefault();
-            const bolt = bolts.find(b => b.id == document.getElementById('in-bolt-id').value);
-            logs.push({
+            const boltId = document.getElementById('in-item-id').value;
+            const bolt = bolts.find(b => b.id == boltId);
+            transactions.push({
                 id: Date.now(),
                 timestamp: new Date().toISOString(),
                 type: 'IN',
                 boltName: bolt.name,
                 qty: parseInt(document.getElementById('in-qty').value),
-                pic: document.getElementById('in-pic').value,
-                loc: `R${document.getElementById('in-loc-rak').value}-K${document.getElementById('in-loc-kolom').value}-B${document.getElementById('in-loc-baris').value}`
+                pic: document.getElementById('in-pic').value
             });
             save();
             e.target.reset();
-            showToast("Data Masuk Disimpan");
+            showToast("Stok masuk tersimpan");
         };
 
         document.getElementById('form-out').onsubmit = (e) => {
             e.preventDefault();
-            const bolt = bolts.find(b => b.id == document.getElementById('out-bolt-id').value);
+            const boltId = document.getElementById('out-item-id').value;
+            const bolt = bolts.find(b => b.id == boltId);
             const qty = parseInt(document.getElementById('out-qty').value);
             
-            // Check Stock
-            const currentStock = logs.reduce((acc, l) => l.boltName === bolt.name ? acc + (l.type === 'IN' ? l.qty : -l.qty) : acc, 0);
-            if (qty > currentStock) return showToast(`Stok Kurang! Sisa: ${currentStock}`);
+            const currentStock = transactions.reduce((acc, t) => t.boltName === bolt.name ? acc + (t.type === 'IN' ? t.qty : -t.qty) : acc, 0);
+            if(qty > currentStock) return showToast("Stok tidak cukup!");
 
-            logs.push({
+            transactions.push({
                 id: Date.now(),
                 timestamp: new Date().toISOString(),
                 type: 'OUT',
                 boltName: bolt.name,
                 qty: qty,
-                pic: document.getElementById('out-taker').value,
-                ref: document.getElementById('out-ref').value || '-'
+                pic: document.getElementById('out-pic').value
             });
             save();
             e.target.reset();
-            showToast("Data Keluar Disimpan");
+            showToast("Stok keluar tersimpan");
         };
 
         function updateUI() {
-            // Stats
             document.getElementById('stat-variants').textContent = bolts.length;
-            document.getElementById('stat-stock').textContent = logs.reduce((acc, l) => acc + (l.type === 'IN' ? l.qty : -l.qty), 0);
+            document.getElementById('stat-stock').textContent = transactions.reduce((acc, t) => acc + (t.type === 'IN' ? t.qty : -t.qty), 0);
             
-            const todayStr = new Date().toDateString();
-            document.getElementById('stat-today-in').textContent = logs.filter(l => l.type === 'IN' && new Date(l.timestamp).toDateString() === todayStr).reduce((a,b)=>a+b.qty,0);
-            document.getElementById('stat-today-out').textContent = logs.filter(l => l.type === 'OUT' && new Date(l.timestamp).toDateString() === todayStr).reduce((a,b)=>a+b.qty,0);
+            const today = new Date().toDateString();
+            document.getElementById('stat-today-in').textContent = transactions.filter(t => t.type === 'IN' && new Date(t.timestamp).toDateString() === today).reduce((a, b) => a + b.qty, 0);
+            document.getElementById('stat-today-out').textContent = transactions.filter(t => t.type === 'OUT' && new Date(t.timestamp).toDateString() === today).reduce((a, b) => a + b.qty, 0);
 
-            // Dropdowns
-            const opts = bolts.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-            document.getElementById('in-bolt-id').innerHTML = opts;
-            document.getElementById('out-bolt-id').innerHTML = opts;
+            const opt = bolts.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+            document.getElementById('in-item-id').innerHTML = opt;
+            document.getElementById('out-item-id').innerHTML = opt;
 
-            // Master List
             document.getElementById('master-list').innerHTML = bolts.map(b => `
-                <div class="bg-white p-5 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
-                    <span class="text-xs font-bold text-slate-700">${b.name}</span>
-                    <button onclick="deleteBolt(${b.id})" class="text-rose-400 font-bold px-2">×</button>
+                <div class="bg-white p-6 rounded-[24px] border border-slate-100 flex justify-between items-center shadow-sm">
+                    <span class="font-black text-xs uppercase tracking-tight">${b.name}</span>
+                    <button onclick="deleteItem(${b.id})" class="text-rose-400 hover:text-rose-600 transition">Hapus</button>
                 </div>
             `).join('');
 
-            // Logs
-            const history = logs.slice().reverse().slice(0, 20);
-            if (history.length === 0) {
-                document.getElementById('empty-state').classList.remove('hidden');
-                document.getElementById('log-body').innerHTML = "";
-            } else {
-                document.getElementById('empty-state').classList.add('hidden');
-                document.getElementById('log-body').innerHTML = history.map(l => `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="px-6 py-4 text-[10px] text-slate-400 font-mono">${new Date(l.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td>
-                        <td class="px-6 py-4 font-bold text-slate-700">${l.boltName}</td>
-                        <td class="px-6 py-4">
-                            <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${l.type === 'IN' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
-                                ${l.type === 'IN' ? 'MASUK' : 'KELUAR'}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-right font-black ${l.type === 'IN' ? 'text-emerald-600' : 'text-rose-600'}">
-                            ${l.type === 'IN' ? '+' : '-'}${l.qty}
-                        </td>
-                    </tr>
-                `).join('');
-            }
-        }
-
-        function clearHistory() {
-            if(confirm('Hapus semua riwayat?')) {
-                logs = [];
-                save();
-            }
+            const recentLogs = transactions.slice().reverse().slice(0, 15);
+            document.getElementById('main-log-body').innerHTML = recentLogs.map(t => `
+                <tr>
+                    <td class="px-6 py-4 font-bold text-slate-400">${new Date(t.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+                    <td class="px-6 py-4 font-black uppercase text-slate-700">${t.boltName}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-lg font-black text-[9px] ${t.type === 'IN' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">${t.type}</span>
+                    </td>
+                    <td class="px-6 py-4 text-right font-black ${t.type === 'IN' ? 'text-emerald-600' : 'text-rose-600'}">${t.type === 'IN' ? '+' : '-'}${t.qty}</td>
+                </tr>
+            `).join('');
         }
 
         function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.classList.remove('opacity-0', 'translate-y-4');
-            t.classList.add('opacity-100', 'translate-y-0');
-            setTimeout(() => {
-                t.classList.remove('opacity-100', 'translate-y-0');
-                t.classList.add('opacity-0', 'translate-y-4');
-            }, 3000);
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('opacity-100', '-translate-y-2');
+            setTimeout(() => toast.classList.remove('opacity-100', '-translate-y-2'), 2500);
         }
 
-        // --- EXPORT PDF ---
-        async function exportToPDF(type) {
+        function exportPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            const data = logs.filter(l => l.type === type);
-            
-            doc.setFont("helvetica", "bold");
-            doc.text(`LAPORAN STOK ${type === 'IN' ? 'MASUK' : 'KELUAR'} - BOLTCORE`, 14, 20);
+            doc.setFontSize(18);
+            doc.text('LAPORAN INVENTORY MAINTENANCE', 14, 20);
             doc.setFontSize(10);
-            doc.text(`Dicetak: ${new Date().toLocaleString()}`, 14, 28);
+            doc.text(`Dicetak pada: ${new Date().toLocaleString()}`, 14, 28);
 
-            const heads = type === 'IN' ? [['Tanggal', 'Baut', 'Lokasi', 'PIC', 'Qty']] : [['Tanggal', 'Baut', 'Pengambil', 'Ref', 'Qty']];
-            const body = data.map(l => [
-                new Date(l.timestamp).toLocaleDateString(),
-                l.boltName,
-                type === 'IN' ? l.loc : l.pic,
-                type === 'IN' ? l.pic : l.ref,
-                l.qty
+            const tableData = transactions.map(t => [
+                new Date(t.timestamp).toLocaleString(),
+                t.boltName,
+                t.type,
+                t.qty,
+                t.pic
             ]);
 
-            doc.autoTable({ startY: 35, head: heads, body: body, theme: 'grid' });
-            doc.save(`BoltCore_${type}_${Date.now()}.pdf`);
-            showToast("PDF Berhasil Diunduh");
+            doc.autoTable({
+                startY: 35,
+                head: [['Waktu', 'Barang', 'Tipe', 'Qty', 'PIC']],
+                body: tableData,
+            });
+            doc.save('Laporan_Inventory_Maintenance.pdf');
         }
 
-        // --- INIT ---
-        window.onload = () => {
-            // Dropdown setup
-            document.getElementById('in-loc-kolom').innerHTML = Array.from({length:5}, (_,i)=>`<option value="${i+1}">Kolom ${i+1}</option>`).join('');
-            document.getElementById('in-loc-baris').innerHTML = Array.from({length:10}, (_,i)=>`<option value="${i+1}">Baris ${i+1}</option>`).join('');
-            
-            if (localStorage.getItem('bc_auth') === 'true') showApp();
-            
-            // Network check
-            const updateStatus = () => {
-                document.getElementById('offline-indicator').classList.toggle('hidden', navigator.onLine);
-            };
-            window.addEventListener('online', updateStatus);
-            window.addEventListener('offline', updateStatus);
-            updateStatus();
-        };
-
-        // Service Worker Reg
-        if ('serviceWorker' in navigator) {
+        // Fix Service Worker: Only register if URL is https/http, avoid blob issues in preview
+        if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(() => console.log("Standalone mode"));
+                // In production (GitHub), sw.js should be a separate file
+                // For this environment, we skip to avoid protocol errors
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log("SW registration skipped or failed in preview environment.");
+                });
             });
         }
+
+        window.onload = () => {
+            if (sessionStorage.getItem('isLoggedIn_Kalung') === 'true') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                document.getElementById('app-content').classList.add('opacity-100');
+                updateUI();
+            }
+        };
     </script>
 </body>
 </html>
